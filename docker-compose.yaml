@@ -1,0 +1,45 @@
+version: '2'
+services: # servicesの中にDockerコンテナを定義
+  app: # appという名前のコンテナ
+    container_name: "user-service" # コンテナ名を明示的に指定
+    image: openjdk:8-jdk-alpine # Dockerイメージ指定
+    ports: # ホストOSとコンテナのポートマッピング
+      - "3001:8080" # ホストOSは3001ポート:コンテナは8080
+    volumes: # ホストOSとコンテナのファイル共有
+      - .:/app # プロジェクト直下とコンテナ側の/appが共有
+    working_dir: /app # コンテナ側のカレントディレクトリ/appに
+    command: ./gradlew bootRun # コンテナ起動時にgradleでSB起動
+    networks: # Dockerネットワークはlocalを指定
+      - local
+  dbserver:
+    container_name: "user-db"
+    image: mysql:5.7
+    volumes:
+      # docker-entrypoint-initdb.dのフォルダの中に
+      # シェルスクリプトを入れておけば起動時に実行してくれる
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    environment: # 環境変数の指定
+      # MYSQL_DATABASE: mysql
+      MYSQL_USER: sboot
+      MYSQL_PASSWORD: sboot
+      MYSQL_ROOT_PASSWORD: root
+      TZ: "Asia/Tokyo"
+    networks:
+      - local
+  myadmin:
+    container_name: "user-db-admin"
+    image: phpmyadmin/phpmyadmin
+    depends_on:
+      - dbserver
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: dbserver
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "1111:80"
+    networks: # 追加!!!
+      - local
+networks: # ネットワークが外部公開している
+  local:
+    external: true
